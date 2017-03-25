@@ -5,79 +5,76 @@ class Chat {
     
     public function __construct($filename) {
         $this->filename = $filename;
-        // ------ For DOM
-        ///*
-        $this->xml = new DOMDocument('1.0','UTF-8'); 
-        
-        $this->xml->preserveWhiteSpace = false;
-        $this->xml->formatOutput = true;
-        //*/
-        // ------ For simplexml 
-        //$this->xml = simplexml_load_file($filename);
+        $this->xml = simplexml_load_file($filename);
     }
-    public function newArticle($article,$link,$author,$pubDate,$description) {
-        // ------ For DOM
-        ///*
-        //loading the xml
-        $this->xml->load($this->filename);
-        //getting the channel node
-        $channel = $this->xml->getElementsByTagName("channel")->item(0);
-        //creating new item element
-        $item = $this->xml->createElement("item");
-        //adding nodes to item element
-        $article = $this->xml->createElement("article", $article);
-        $item->appendChild($article);
-        $link = $this->xml->createElement("link", $link);
-        $item->appendChild($link);
-        $author = $this->xml->createElement("author", $author);
-        $item->appendChild($author);
-        $pubDate = $this->xml->createElement("pubDate", $pubDate);
-        $item->appendChild($pubDate);
-        $description = $this->xml->createElement("description", $description);
-        $item->appendChild($description);
+    
+    public function getMessages() {        
+        $xml = simplexml_load_file($this->filename);
+        $xml->saveXML($this->filename);
+        //set variable for messages 
+        $messages = $xml->message;
         
-        //adding item node to channel
-        $channel->appendChild($item);
+        return $messages;
+    }
+    public function newMessage($text, $username) {
+        $date = date(r);
         
-        //limiting to 5 items
-        $items = $this->xml->getElementsByTagName("item");
-        $itemCount = $items->length;
+        $xml = simplexml_load_file($this->filename);
         
-        while ($itemCount > 5) {
-            $oldItem = $items->item(0);
-            $oldItem->parentNode->removeChild($oldItem);
-            $itemCount = $items->length;
-        }
+        //creating new message element
+        $message = $xml->addChild("message");
+        $message->addAttribute("id","");
         
-        //saving the xml file
-        $this->xml->save($this->filename);
-        //*/
+        //creating new user element
+        $user = $message->addChild("user");
+        $user->addAttribute("id","");
         
-        // ------ For simpleXML
-        /*
-        $xml = $this->xml;
+        $user->addChild("username", $username);
         
-        //creating new item element
-        $item = $xml->channel->addChild("item");
-        
-        //adding nodes to item element
-        $item->addChild("article", $article);
-        $item->addChild("link", $link);
-        $item->addChild("author", $author);
-        $item->addChild("pubDate", $pubDate);
-        $item->addChild("description", $description);
-        
-        //limiting to 5 items
-        $itemCount = count($xml->channel->item);
-
-        while($itemCount > 5){
-            unset($xml->channel[0]->item[0]);
-            $itemCount = count($xml->channel->item);
-        }
+        //adding nodes to message element
+        $message->addChild("text", $text);
+        $message->addChild("time", $date);
         
         //saving the xml file
         $xml->saveXML($this->filename);
-        */
+        
+        echo "<meta http-equiv='refresh' content='0'>";
+    }
+    public function getUser($username, $password) {
+        $user = $this->xml->xpath("//user[username='".$username."']");
+        
+        $uname = (string) $user[0]->username;
+        $color = (string) $user[0]->color;
+        $login = ($password == $user[0]->password) ? true : false;
+        
+        $userDetails = ["username" => $uname, "color" => $color, "log" => $login];
+        
+        return $userDetails;
+    }
+    
+    public function newUser($username, $password) {
+        $user = $this->xml->addChild("user");
+        
+        $uname = $user->addChild("username", $username);
+        $upass = $user->addChild("password", $password);
+        $uname = $user->addChild("color", "#337ab7");
+        
+        $this->xml->saveXML($this->filename);
+        
+        return $this->getUser($username, $password);
+    }
+    
+    public function userUpdate($username, $password, $color) {
+        $user = $this->xml->xpath("//user[username='".$username."']");
+        
+        if (!empty($password)){
+            $user[0]->password = $password;   
+        }
+        $user[0]->color = $color;
+        
+        $this->xml->saveXML($this->filename);
+        
+        return "Updates were saved.";
     }
 }
 ?>
